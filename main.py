@@ -25,21 +25,6 @@ def product(product_name: str):
         "product": product_name
     }
 
-# Get Product Id
-# @app.get("/product/id/{product_id}")
-# def product_id(product_id: int):
-#     return {
-#         "product_id": product_id,
-#     }
-
-# Get Product Id with Detail Query Parameter 
-# @app.get("/product/{product_id}")
-# def product_detail(product_id: int, detail: str | None = None):
-#     return {
-#         "product_id": product_id,
-#         "detail": detail
-#     }
-
 # Get All Products from fake database
 @app.get("/product/all")
 def get_all_product():
@@ -52,21 +37,45 @@ def get_product_id(item_id: int):
         raise HTTPException(status_code=404, detail="Product Not Found")
     return Inventory[item_id]
 
-# # Create Product
-# @app.post("/product/create/")
-# def create_product(product: Product):
-#     return {
-#         "status":"Product has created",
-#         "Product": product  
-#     }
+# Add New Product
+@app.post("/product/create/")
+def create_product(item: Product):
 
-# Update existing product
-# @app.put("/product/{product_id}")
-# def update_product(product_id: int, product: Product ):
-#     return {
-#         "status":"product has updated",
-#         "product_id": product_id,
-#         "product_updated": product
-#     }
+    new_id = max(Inventory.keys()) + 1 if Inventory else 1
+    Inventory[new_id] = item.dict()
+
+    return {
+        "status": "Product added successfully",
+        "product_id": new_id,
+        "product": Inventory[new_id]
+    }
+
+# Update Product via ID
+@app.put("/product/update/{item_id}")
+def update_product(item_id: int, product: Product):
+    if item_id not in Inventory:
+        raise HTTPException(status_code=404, detail="Product Not Found")
+    
+    Inventory[item_id] = product.dict()
+
+    return {
+        "status": "Product updated successfully",
+        "product_id": item_id,
+        "product": Inventory[item_id],
+    }
+
+# Delete Product via ID
+@app.delete("/product/remove/{item_id}")
+def remove_product(item_id: int):
+    if item_id not in Inventory:
+        raise HTTPException(status_code=404, detail="Product Not Found")
+
+    removed_product = Inventory.pop(item_id)
+
+    return {
+        "status": "Deleted product successfully",
+        "product_id": item_id,
+        "deleted_product": removed_product,
+    }
 
 
