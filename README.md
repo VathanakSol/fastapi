@@ -1,63 +1,79 @@
 # FastAPI Product Management API
 
-A secure REST API built with FastAPI for managing products. This project demonstrates core FastAPI concepts, API security with API keys, dependency injection, and comprehensive CRUD operations.
+A secure REST API built with FastAPI for managing products. This project demonstrates modern FastAPI architecture with modular design, API security with API keys, dependency injection, and comprehensive CRUD operations.
 
 ## Project Structure
 
 ```
-├── main.py          # Main FastAPI application with route definitions
-├── product.py       # Pydantic models and data storage
-├── security.py      # API key authentication and security functions
-├── .env             # Environment variables (not tracked in git)
-├── .env.example     # Environment variables template
-├── requirements.txt # Project dependencies
-└── README.md        # Project documentation
+├── main.py                 # Main FastAPI application entry point
+├── database.py            # In-memory database (Inventory dictionary)
+├── config/
+│   ├── settings.py        # Pydantic settings with environment configuration
+│   └── security.py        # API key authentication and security functions
+├── schemas/
+│   └── product.py         # Pydantic models for data validation
+├── routers/
+│   ├── products.py        # Product CRUD endpoints
+│   ├── views.py           # General view endpoints
+│   └── settings.py        # Settings and environment endpoints
+├── .env                   # Environment variables (not tracked in git)
+├── .env.dev              # Development environment variables
+├── .env.example          # Environment variables template
+└── README.md             # Project documentation
 ```
 
-## Key Files
+## Key Components
 
 ### `main.py`
 
-- Contains the FastAPI application instance
-- Defines all API endpoints with security protection
-- Implements full CRUD operations (GET, POST, PUT, DELETE)
-- Uses dependency injection for shared logic and security
-- Handles error handling with HTTPException
+- FastAPI application instance with modular router architecture
+- Includes routers for products, views, and settings
+- Clean separation of concerns with organized route structure
 
-### `product.py`
+### `config/settings.py`
 
-- Defines the `Product` Pydantic model with advanced validation
-- Contains the `Inventory` dictionary (fake database)
-- Implements field validation with constraints (min/max length, price validation)
-- Supports optional fields like discount
+- Pydantic Settings for environment configuration management
+- Loads from `.env.dev` file for development environment
+- Type-safe configuration with automatic validation
 
-### `security.py`
+### `config/security.py`
 
-- Implements API key authentication using FastAPI Security
+- API key authentication using FastAPI Security
 - Provides `get_api_key` dependency for protected endpoints
-- Loads API key from environment variables
+- Integrated with Pydantic settings for dynamic configuration
 - Returns proper HTTP 403 errors for invalid keys
+
+### `schemas/product.py`
+
+- Pydantic models for data validation and serialization
+- Advanced field validation with constraints
+- Type hints for better IDE support and documentation
+
+### `routers/`
+
+- Modular route organization with APIRouter
+- Separate routers for different functionality areas
+- Consistent API versioning with `/api/v1` prefix
 
 ## API Endpoints
 
-### Security-Protected Endpoints
+All endpoints are prefixed with `/api/v1` and require an API key in the `X-API-KEY` header.
 
-All endpoints marked with 🔒 require an API key in the `X-API-KEY` header.
+### Product Management Endpoints
 
-### General Endpoints
+- `GET /api/v1/product/all` 🔒 - Get all products from inventory
+- `GET /api/v1/product/{item_id}` 🔒 - Get specific product by ID
+- `POST /api/v1/product/create` 🔒 - Create new product
+- `PUT /api/v1/product/update/{item_id}` 🔒 - Update existing product
+- `DELETE /api/v1/product/remove/{item_id}` 🔒 - Delete product by ID
 
-- `GET /views/` - View products with shared parameters (q, limit)
-- `GET /views/secure/` 🔒 - Secure endpoint demonstrating API key access
-- `GET /info` 🔒 - Get testing information
+### View Endpoints
 
-### Product Endpoints
+- `GET /api/v1/views/` 🔒 - Secure view endpoint for access verification
 
-- `GET /product/name/{product_name}` - Get product by name (public)
-- `GET /product/all` 🔒 - Get all products from inventory
-- `GET /product/{item_id}` 🔒 - Get specific product by ID
-- `POST /product/create/` 🔒 - Create new product
-- `PUT /product/update/{item_id}` 🔒 - Update existing product
-- `DELETE /product/remove/{item_id}` 🔒 - Delete product by ID
+### Settings Endpoints
+
+- `GET /api/v1/settings/` 🔒 - Get current API key information (development)
 
 ## Setup and Installation
 
@@ -65,18 +81,20 @@ All endpoints marked with 🔒 require an API key in the `X-API-KEY` header.
 
 ```bash
 # Install required packages
-pip install fastapi uvicorn python-dotenv
+pip install fastapi uvicorn pydantic-settings
 ```
 
 ### 2. Environment Configuration
 
 ```bash
 # Copy the example environment file
-copy .env.example .env
+copy .env.example .env.dev
 
-# Edit .env and set your API key
-# API_KEY = "your_secret_key_here"
+# Edit .env.dev and set your API key
+# API_KEY = "dev"
 ```
+
+The application uses `.env.dev` for development environment configuration.
 
 ### 3. Run the Application
 
@@ -90,6 +108,7 @@ The API will be available at `http://localhost:8000`
 ## Interactive Documentation
 
 FastAPI automatically generates interactive API documentation:
+
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
@@ -184,10 +203,12 @@ API_KEY = os.getenv("API_KEY")
 ## Data Validation Rules
 
 ### Field Name Consistency
+
 - Pydantic model field names must match data dictionary keys
 - `in_stock` in model = `"in_stock"` in data (not `"stock"`)
 
 ### Type Validation
+
 - FastAPI automatically validates types based on function parameters
 - `item_id: int` will reject non-integer values
 - Returns 422 error for invalid types
@@ -200,80 +221,217 @@ API_KEY = os.getenv("API_KEY")
 4. **Route Organization**: Logical grouping of related endpoints
 5. **Documentation**: Clear comments explaining each endpoint
 
-## Testing the API
+## API Testing Guide
 
-### Using curl
+### Prerequisites
+
+1. Start the FastAPI server:
+
+   ```bash
+   uvicorn main:app --reload
+   ```
+
+2. Get your API key from `.env.dev` file (default: "dev")
+
+3. Server will be running at `http://localhost:8000`
+
+### Interactive Documentation
+
+FastAPI provides automatic interactive documentation:
+
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+
+In Swagger UI, click "Authorize" and enter your API key to test protected endpoints.
+
+### Testing with curl
+
+#### 1. Get All Products
 
 ```bash
-# Public endpoint (no API key required)
-curl http://localhost:8000/product/name/Product1
-
-# Protected endpoints (API key required)
-curl -H "X-API-KEY: your_secret_key" http://localhost:8000/product/all
-curl -H "X-API-KEY: your_secret_key" http://localhost:8000/product/1
-
-# Create new product
-curl -X POST "http://localhost:8000/product/create/" \
-  -H "X-API-KEY: your_secret_key" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "New Product", "price": 29.99, "in_stock": true}'
-
-# Update product
-curl -X PUT "http://localhost:8000/product/update/1" \
-  -H "X-API-KEY: your_secret_key" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Updated Product", "price": 39.99, "in_stock": false}'
-
-# Delete product
-curl -X DELETE "http://localhost:8000/product/remove/1" \
-  -H "X-API-KEY: your_secret_key"
+curl -H "X-API-KEY: dev" http://localhost:8000/api/v1/product/all
 ```
 
-### Using Python requests
+#### 2. Get Specific Product by ID
+
+```bash
+curl -H "X-API-KEY: dev" http://localhost:8000/api/v1/product/1
+```
+
+#### 3. Create New Product
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/product/create" \
+  -H "X-API-KEY: dev" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "New Product",
+    "price": 29.99,
+    "in_stock": true,
+    "discount": 0.1
+  }'
+```
+
+#### 4. Update Product
+
+```bash
+curl -X PUT "http://localhost:8000/api/v1/product/update/1" \
+  -H "X-API-KEY: dev" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Updated Product",
+    "price": 39.99,
+    "in_stock": false
+  }'
+```
+
+#### 5. Delete Product
+
+```bash
+curl -X DELETE "http://localhost:8000/api/v1/product/remove/1" \
+  -H "X-API-KEY: dev"
+```
+
+#### 6. Test Access Control
+
+```bash
+# Test secure view endpoint
+curl -H "X-API-KEY: dev" http://localhost:8000/api/v1/views/
+
+# Test settings endpoint
+curl -H "X-API-KEY: dev" http://localhost:8000/api/v1/settings/
+```
+
+### Testing with Python requests
 
 ```python
 import requests
+import json
 
-headers = {"X-API-KEY": "your_secret_key"}
+# Configuration
+BASE_URL = "http://localhost:8000/api/v1"
+headers = {"X-API-KEY": "dev"}
 
-# Get all products
-response = requests.get("http://localhost:8000/product/all", headers=headers)
-print(response.json())
+# 1. Get all products
+response = requests.get(f"{BASE_URL}/product/all", headers=headers)
+print("All products:", response.json())
 
-# Create new product
+# 2. Create new product
 product_data = {
     "name": "Test Product",
     "price": 19.99,
     "in_stock": True,
-    "discount": 0.1
+    "discount": 0.15
 }
-response = requests.post("http://localhost:8000/product/create/", 
+response = requests.post(f"{BASE_URL}/product/create",
                         json=product_data, headers=headers)
-print(response.json())
+print("Created product:", response.json())
+
+# 3. Get specific product
+product_id = 1
+response = requests.get(f"{BASE_URL}/product/{product_id}", headers=headers)
+print(f"Product {product_id}:", response.json())
+
+# 4. Update product
+updated_data = {
+    "name": "Updated Product",
+    "price": 25.99,
+    "in_stock": False
+}
+response = requests.put(f"{BASE_URL}/product/update/{product_id}",
+                       json=updated_data, headers=headers)
+print("Updated product:", response.json())
+
+# 5. Test access control
+response = requests.get(f"{BASE_URL}/views/", headers=headers)
+print("Access test:", response.json())
+
+# 6. Delete product
+response = requests.delete(f"{BASE_URL}/product/remove/{product_id}", headers=headers)
+print("Deleted product:", response.json())
 ```
 
-## Recent Updates
+### Testing with Postman
 
-### Security Implementation
+1. **Set Base URL**: `http://localhost:8000/api/v1`
 
-- Added API key authentication for protected endpoints
-- Implemented `security.py` module with reusable security functions
-- Environment variable management with `.env` files
-- Proper HTTP 403 error responses for unauthorized access
+2. **Add Authorization Header**:
 
-### Enhanced CRUD Operations
+   - Key: `X-API-KEY`
+   - Value: `dev`
 
-- Complete CRUD functionality (Create, Read, Update, Delete)
-- Advanced Pydantic validation with field constraints
-- Optional fields support (discount field)
-- Improved error handling and status codes
+3. **Test Endpoints**:
+   - GET `/product/all`
+   - GET `/product/1`
+   - POST `/product/create` with JSON body
+   - PUT `/product/update/1` with JSON body
+   - DELETE `/product/remove/1`
 
-### Code Organization
+### Sample Product JSON
 
-- Modular architecture with separate security layer
-- Dependency injection for shared logic and security
-- Environment configuration with `.env.example` template
-- Updated `.gitignore` to allow `.env.example` while protecting `.env`
+```json
+{
+  "name": "Sample Product",
+  "price": 24.99,
+  "in_stock": true,
+  "discount": 0.1
+}
+```
+
+### Expected Responses
+
+#### Success Response (Create/Update)
+
+```json
+{
+  "status": "Product added successfully",
+  "product_id": 1,
+  "product": {
+    "name": "Sample Product",
+    "price": 24.99,
+    "in_stock": true,
+    "discount": 0.1
+  }
+}
+```
+
+#### Error Response (Invalid API Key)
+
+```json
+{
+  "detail": "Invalid API Key"
+}
+```
+
+#### Error Response (Product Not Found)
+
+```json
+{
+  "detail": "Product Not Found"
+}
+```
+
+## Recent Updates (Latest)
+
+### Modular Architecture Refactor
+
+- **Router-based Organization**: Separated endpoints into dedicated routers (`products.py`, `views.py`, `settings.py`)
+- **API Versioning**: All endpoints now use `/api/v1` prefix for consistent versioning
+- **Configuration Management**: Implemented Pydantic Settings with `.env.dev` for development environment
+- **Dynamic Configuration**: Security module now uses Pydantic settings for dynamic API key loading
+
+### Enhanced Security
+
+- **Integrated Security**: Security module now uses centralized settings configuration
+- **Environment Flexibility**: Support for multiple environment files (`.env`, `.env.dev`)
+- **Dynamic API Key Loading**: API key changes in environment files are reflected without code changes (requires server restart)
+
+### Improved Project Structure
+
+- **Schemas Directory**: Moved Pydantic models to dedicated `schemas/` directory
+- **Config Directory**: Centralized configuration files in `config/` directory
+- **Router Directory**: Organized API endpoints in `routers/` directory
+- **Clean Separation**: Clear separation between data models, configuration, and business logic
 
 ## Next Steps for Enhancement
 
@@ -296,10 +454,11 @@ print(response.json())
 
 ### API Key Issues
 
-- Ensure `.env` file is in the project root directory
-- Verify API key format in `.env`: `API_KEY=your_secret_key` (no quotes)
-- Check that `python-dotenv` is installed
-- Restart server after modifying `.env` file
+- Ensure `.env.dev` file is in the project root directory
+- Verify API key format in `.env.dev`: `API_KEY=dev` (no quotes)
+- Check that `pydantic-settings` is installed
+- Restart server after modifying `.env.dev` file
+- Default development API key is "dev"
 
 ### Validation Errors
 
