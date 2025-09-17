@@ -1,21 +1,44 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
+
+import os
+
+from dotenv import load_dotenv
 
 from product import Product, Inventory
+from security import get_api_key
+
+# Load environment variables
+load_dotenv()
+API_KEY = os.getenv("API_KEY")
 
 app = FastAPI()
 
-# Testing Hello World
-@app.get("/")
-def root():
+# View Information With Security 
+@app.get("/views/secure/")
+def secure_data(api_key: str = Depends(get_api_key)):
     return {
-        "message":"Hello FastAPI3"
+        "status": "You have access ✅",
+        "api_key": api_key
     }
 
-# Get Message  
-@app.get("/testing")
-def testing():
+# Shared Logic
+def common_parameters(q: str | None = None, limit: int = 10):
     return {
-        "display":"this is a message"
+        "q": q,
+        "limit": limit
+    }
+
+
+# Use Shared Logic
+@app.get("/views/")
+def view_products(commons: dict = Depends(common_parameters)):
+    return commons
+
+# Get Information With Security Mode
+@app.get("/info")
+def testing(api_key: str = Depends(get_api_key)):
+    return {
+        "display": "Product Testing"
     }
 
 # Get Product Name
@@ -27,19 +50,19 @@ def product(product_name: str):
 
 # Get All Products from fake database
 @app.get("/product/all")
-def get_all_product():
+def get_all_product(api_key: str = Depends(get_api_key)):
     return Inventory
 
 # Get Product via ID
 @app.get("/product/{item_id}")
-def get_product_id(item_id: int):
+def get_product_id(item_id: int, api_key: str = Depends(get_api_key)):
     if item_id not in Inventory: 
         raise HTTPException(status_code=404, detail="Product Not Found")
     return Inventory[item_id]
 
 # Add New Product
 @app.post("/product/create/")
-def create_product(item: Product):
+def create_product(item: Product, api_key: str = Depends(get_api_key)):
 
     new_id = max(Inventory.keys()) + 1 if Inventory else 1
     Inventory[new_id] = item.dict()
@@ -52,7 +75,7 @@ def create_product(item: Product):
 
 # Update Product via ID
 @app.put("/product/update/{item_id}")
-def update_product(item_id: int, product: Product):
+def update_product(item_id: int, product: Product, api_key: str = Depends(get_api_key)):
     if item_id not in Inventory:
         raise HTTPException(status_code=404, detail="Product Not Found")
     
@@ -66,7 +89,7 @@ def update_product(item_id: int, product: Product):
 
 # Delete Product via ID
 @app.delete("/product/remove/{item_id}")
-def remove_product(item_id: int):
+def remove_product(item_id: int, api_key: str = Depends(get_api_key)):
     if item_id not in Inventory:
         raise HTTPException(status_code=404, detail="Product Not Found")
 
