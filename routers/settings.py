@@ -8,5 +8,5 @@ router = APIRouter(prefix="/api/v1/settings", tags=["Environment"])
 @router.get("/")
 def settings(api_key: str = Depends(get_api_key)):
     return {
-        "api_key": api_key
+        "api_key": api_key,
     }

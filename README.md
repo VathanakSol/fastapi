@@ -1,24 +1,28 @@
-# FastAPI Product Management API
+# FastAPI Product Management & Database API
 
-A secure REST API built with FastAPI for managing products. This project demonstrates modern FastAPI architecture with modular design, API security with API keys, dependency injection, and comprehensive CRUD operations.
+A comprehensive REST API built with FastAPI featuring product management, PostgreSQL database integration, and secure API endpoints. This project demonstrates modern FastAPI architecture with modular design, database operations using Tortoise ORM, API security with API keys, dependency injection, and comprehensive CRUD operations.
 
 ## Project Structure
 
 ```
-├── main.py                 # Main FastAPI application entry point
-├── database.py            # In-memory database (Inventory dictionary)
+├── main.py                 # Main FastAPI application with Tortoise ORM integration
+├── database.py            # Legacy in-memory database (Inventory dictionary)
+├── docker-compose.yml     # PostgreSQL database container setup
+├── requirements.txt       # Python dependencies including Tortoise ORM
 ├── config/
-│   ├── settings.py        # Pydantic settings with environment configuration
+│   ├── settings.py        # Pydantic settings with database URL configuration
 │   └── security.py        # API key authentication and security functions
 ├── schemas/
 │   └── product.py         # Pydantic models for data validation
 ├── routers/
-│   ├── products.py        # Product CRUD endpoints
+│   ├── products.py        # Product CRUD endpoints (legacy in-memory)
+│   ├── connections.py     # Database connection and Item CRUD endpoints
 │   ├── views.py           # General view endpoints
-│   └── settings.py        # Settings and environment endpoints
-├── .env                   # Environment variables (not tracked in git)
-├── .env.dev              # Development environment variables
+│   ├── settings.py        # Settings and environment endpoints
+│   └── healths.py         # Health check endpoints
+├── .env                   # Environment variables (DATABASE_URL, API_KEY)
 ├── .env.example          # Environment variables template
+├── .gitignore            # Git ignore patterns
 └── README.md             # Project documentation
 ```
 
@@ -27,14 +31,18 @@ A secure REST API built with FastAPI for managing products. This project demonst
 ### `main.py`
 
 - FastAPI application instance with modular router architecture
-- Includes routers for products, views, and settings
-- Clean separation of concerns with organized route structure
+- **PostgreSQL Integration**: Tortoise ORM setup with async database operations
+- **Database Lifecycle Management**: Automatic database initialization and schema generation
+- **Router Integration**: Includes routers for products, database operations, views, settings, and health checks
+- **Async Context Manager**: Proper database connection handling with lifespan events
 
 ### `config/settings.py`
 
 - Pydantic Settings for environment configuration management
-- Loads from `.env.dev` file for development environment
+- **Database Configuration**: PostgreSQL connection URL management
+- **Environment Variables**: Loads from `.env` file for production/development
 - Type-safe configuration with automatic validation
+- Supports both API key and database URL configuration
 
 ### `config/security.py`
 
@@ -51,15 +59,33 @@ A secure REST API built with FastAPI for managing products. This project demonst
 
 ### `routers/`
 
-- Modular route organization with APIRouter
-- Separate routers for different functionality areas
-- Consistent API versioning with `/api/v1` prefix
+- **Modular Route Organization**: Separate APIRouter instances for different functionality
+- **Database Operations**: `connections.py` handles PostgreSQL database CRUD operations
+- **Product Management**: `products.py` manages legacy in-memory product operations
+- **System Monitoring**: `healths.py` provides application health checks
+- **Configuration Access**: `settings.py` and `views.py` for system information
+- **Consistent API Versioning**: All endpoints use `/api/v1` prefix
+
+### `docker-compose.yml`
+
+- **PostgreSQL Container**: Pre-configured PostgreSQL 15 database
+- **Development Ready**: Default credentials and database setup
+- **Data Persistence**: Volume mapping for data retention
+- **Port Mapping**: Accessible on localhost:5432
 
 ## API Endpoints
 
-All endpoints are prefixed with `/api/v1` and require an API key in the `X-API-KEY` header.
+All protected endpoints require an API key in the `X-API-KEY` header.
 
-### Product Management Endpoints
+### Database Operations (PostgreSQL)
+
+- `GET /api/v1/database/` 🔒 - Test PostgreSQL database connection and get database info
+- `POST /api/v1/database/create-items?name={item_name}` 🔒 - Create new item in database
+- `GET /api/v1/database/show-items/` 🔒 - Get all items from database
+- `GET /api/v1/database/show-items/{item_id}` 🔒 - Get specific item by ID from database
+- `DELETE /api/v1/database/remove-items/{item_id}` 🔒 - Delete item from database
+
+### Product Management (Legacy In-Memory)
 
 - `GET /api/v1/product/all` 🔒 - Get all products from inventory
 - `GET /api/v1/product/{item_id}` 🔒 - Get specific product by ID
@@ -67,36 +93,59 @@ All endpoints are prefixed with `/api/v1` and require an API key in the `X-API-K
 - `PUT /api/v1/product/update/{item_id}` 🔒 - Update existing product
 - `DELETE /api/v1/product/remove/{item_id}` 🔒 - Delete product by ID
 
-### View Endpoints
+### System Endpoints
 
+- `GET /api/v1/healths/` - Application health check (no auth required)
 - `GET /api/v1/views/` 🔒 - Secure view endpoint for access verification
-
-### Settings Endpoints
-
 - `GET /api/v1/settings/` 🔒 - Get current API key information (development)
 
 ## Setup and Installation
 
-### 1. Install Dependencies
+### 1. Prerequisites
+
+- Python 3.8+
+- Docker and Docker Compose (for PostgreSQL database)
+
+### 2. Install Dependencies
 
 ```bash
-# Install required packages
-pip install fastapi uvicorn pydantic-settings
+# Install all required packages
+pip install -r requirements.txt
 ```
 
-### 2. Environment Configuration
+Key dependencies include:
+
+- `fastapi` - Web framework
+- `tortoise-orm` - Async ORM for database operations
+- `asyncpg` - PostgreSQL async driver
+- `uvicorn` - ASGI server
+- `pydantic-settings` - Configuration management
+
+### 3. Database Setup
+
+```bash
+# Start PostgreSQL database using Docker
+docker-compose up -d
+
+# This will create a PostgreSQL container with:
+# - Database: mydb
+# - Username: admin
+# - Password: admin
+# - Port: 5432
+```
+
+### 4. Environment Configuration
 
 ```bash
 # Copy the example environment file
-copy .env.example .env.dev
+cp .env.example .env
 
-# Edit .env.dev and set your API key
-# API_KEY = "dev"
+# Edit .env and configure your settings:
+# API_KEY=your_secret_api_key
+# DATABASE_URL=postgresql://admin:admin@localhost:5432/mydb
 ```
 
-The application uses `.env.dev` for development environment configuration.
-
-### 3. Run the Application
+### 5. Run the Application
 
 ```bash
 # Start the development server
@@ -105,12 +154,26 @@ uvicorn main:app --reload
 
 The API will be available at `http://localhost:8000`
 
-## Interactive Documentation
+### 6. Verify Setup
+
+Test the database connection:
+
+```bash
+curl -H "X-API-KEY: your_secret_api_key" http://localhost:8000/api/v1/database/
+```
+
+Check application health:
+
+```bash
+curl http://localhost:8000/api/v1/healths/
+```
+
+## API Documentation
 
 FastAPI automatically generates interactive API documentation:
 
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
 
 ## Key Concepts Implemented
 
@@ -221,19 +284,40 @@ API_KEY = os.getenv("API_KEY")
 4. **Route Organization**: Logical grouping of related endpoints
 5. **Documentation**: Clear comments explaining each endpoint
 
+## Database Operations Guide
+
+### Database Connection Testing
+
+```bash
+# Test PostgreSQL connection and get database info
+curl -H "X-API-KEY: your_api_key" http://localhost:8000/api/v1/database/
+```
+
 ## API Testing Guide
 
 ### Prerequisites
 
-1. Start the FastAPI server:
+1. Start PostgreSQL database:
+
+   ```bash
+   docker-compose up -d
+   ```
+
+2. Start the FastAPI server:
 
    ```bash
    uvicorn main:app --reload
    ```
 
-2. Get your API key from `.env.dev` file (default: "dev")
+3. Get your API key from `.env` file
 
-3. Server will be running at `http://localhost:8000`
+4. Server will be running at `http://localhost:8000`
+
+#### 6. Health Check (No Auth Required)
+
+```bash
+curl http://localhost:8000/api/v1/healths/
+```
 
 ### Interactive Documentation
 
@@ -306,17 +390,23 @@ curl -H "X-API-KEY: dev" http://localhost:8000/api/v1/settings/
 
 ```python
 import requests
-import json
 
 # Configuration
 BASE_URL = "http://localhost:8000/api/v1"
-headers = {"X-API-KEY": "dev"}
+headers = {"X-API-KEY": "your_api_key"}
 
-# 1. Get all products
-response = requests.get(f"{BASE_URL}/product/all", headers=headers)
-print("All products:", response.json())
+# 1. Test database connection
+response = requests.get(f"{BASE_URL}/database/", headers=headers)
+print("Database connection:", response.json())
 
-# 2. Create new product
+
+
+# 5. Test health endpoint (no auth required)
+response = requests.get(f"{BASE_URL}/healths/")
+print("Health check:", response.json())
+
+
+# 7. Legacy product operations (in-memory)
 product_data = {
     "name": "Test Product",
     "price": 19.99,
@@ -326,29 +416,6 @@ product_data = {
 response = requests.post(f"{BASE_URL}/product/create",
                         json=product_data, headers=headers)
 print("Created product:", response.json())
-
-# 3. Get specific product
-product_id = 1
-response = requests.get(f"{BASE_URL}/product/{product_id}", headers=headers)
-print(f"Product {product_id}:", response.json())
-
-# 4. Update product
-updated_data = {
-    "name": "Updated Product",
-    "price": 25.99,
-    "in_stock": False
-}
-response = requests.put(f"{BASE_URL}/product/update/{product_id}",
-                       json=updated_data, headers=headers)
-print("Updated product:", response.json())
-
-# 5. Test access control
-response = requests.get(f"{BASE_URL}/views/", headers=headers)
-print("Access test:", response.json())
-
-# 6. Delete product
-response = requests.delete(f"{BASE_URL}/product/remove/{product_id}", headers=headers)
-print("Deleted product:", response.json())
 ```
 
 ### Testing with Postman
@@ -358,11 +425,20 @@ print("Deleted product:", response.json())
 2. **Add Authorization Header**:
 
    - Key: `X-API-KEY`
-   - Value: `dev`
+   - Value: `your_api_key`
 
-3. **Test Endpoints**:
+3. **Test Database Endpoints**:
+
+   - GET `/database/` - Test connection
+
+4. **Test System Endpoints**:
+
+   - GET `/healths/` - Health check (no auth)
+   - GET `/views/` - Access verification
+   - GET `/settings/` - Settings info
+
+5. **Test Legacy Product Endpoints**:
    - GET `/product/all`
-   - GET `/product/1`
    - POST `/product/create` with JSON body
    - PUT `/product/update/1` with JSON body
    - DELETE `/product/remove/1`
@@ -413,60 +489,128 @@ print("Deleted product:", response.json())
 
 ## Recent Updates (Latest)
 
-### Modular Architecture Refactor
+### PostgreSQL Database Integration
 
-- **Router-based Organization**: Separated endpoints into dedicated routers (`products.py`, `views.py`, `settings.py`)
-- **API Versioning**: All endpoints now use `/api/v1` prefix for consistent versioning
-- **Configuration Management**: Implemented Pydantic Settings with `.env.dev` for development environment
-- **Dynamic Configuration**: Security module now uses Pydantic settings for dynamic API key loading
+- **Tortoise ORM Integration**: Full async ORM setup with PostgreSQL support
+- **Database Lifecycle Management**: Automatic database initialization and schema generation
+- **CRUD Operations**: Complete Create, Read, Update, Delete operations for database items
+- **Connection Testing**: Built-in database connection testing and health monitoring
+- **Docker Integration**: PostgreSQL container setup with docker-compose
 
-### Enhanced Security
+### Enhanced API Architecture
 
-- **Integrated Security**: Security module now uses centralized settings configuration
-- **Environment Flexibility**: Support for multiple environment files (`.env`, `.env.dev`)
-- **Dynamic API Key Loading**: API key changes in environment files are reflected without code changes (requires server restart)
+- **Database Router**: New `/api/v1/database/` endpoints for PostgreSQL operations
+- **Health Monitoring**: Dedicated health check endpoints at `/api/v1/healths/`
+- **Dual Data Sources**: Support for both PostgreSQL database and legacy in-memory operations
+- **Async Operations**: Full async/await support for database operations
+- **Error Handling**: Comprehensive error handling with proper HTTP status codes
 
-### Improved Project Structure
+### Development Environment
 
-- **Schemas Directory**: Moved Pydantic models to dedicated `schemas/` directory
-- **Config Directory**: Centralized configuration files in `config/` directory
-- **Router Directory**: Organized API endpoints in `routers/` directory
-- **Clean Separation**: Clear separation between data models, configuration, and business logic
+- **Docker Compose**: One-command PostgreSQL database setup
+- **Environment Configuration**: Simplified `.env` file configuration
+- **Database URL Management**: Secure database connection string handling
+- **Development Ready**: Pre-configured database credentials for quick setup
+
+### Security & Configuration
+
+- **Unified Settings**: Single configuration source for API keys and database URLs
+- **Protected Endpoints**: API key authentication for all database operations
+- **Connection Security**: Masked database URLs in API responses
+- **Environment Flexibility**: Support for different environment configurations
 
 ## Next Steps for Enhancement
 
-1. **Database Integration**: Replace dictionary with SQLAlchemy/databases
-2. **JWT Authentication**: Upgrade from API keys to JWT tokens
+1. **Advanced Database Features**: Add database migrations, indexes, and relationships
+2. **JWT Authentication**: Upgrade from API keys to JWT tokens with user management
 3. **Rate Limiting**: Add request rate limiting for API protection
-4. **Testing**: Add comprehensive unit tests with pytest
-5. **Logging**: Implement structured logging for monitoring
-6. **Docker**: Add containerization for easy deployment
-7. **API Versioning**: Implement API versioning strategy
+4. **Testing**: Add comprehensive unit tests with pytest and database fixtures
+5. **Monitoring**: Implement structured logging and metrics collection
+6. **Full Containerization**: Dockerize the FastAPI application
+7. **API Documentation**: Enhanced OpenAPI documentation with examples
+8. **Data Validation**: Advanced input validation and sanitization
+9. **Caching**: Implement Redis caching for frequently accessed data
+10. **Background Tasks**: Add Celery for asynchronous task processing
 
 ## Troubleshooting
 
+### Database Connection Issues
+
+- **PostgreSQL not running**: Ensure Docker container is running with `docker-compose up -d`
+- **Connection refused**: Check if PostgreSQL is accessible on port 5432
+- **Authentication failed**: Verify database credentials in `.env` file match docker-compose.yml
+- **Database doesn't exist**: The database `mydb` should be created automatically by the container
+
 ### Server Won't Start
 
-- Check for syntax errors in Python files
-- Ensure all dependencies are installed: `pip install fastapi uvicorn python-dotenv`
-- Verify `.env` file exists and contains `API_KEY`
-- Check for import errors in modules
+- **Missing dependencies**: Install all requirements with `pip install -r requirements.txt`
+- **Environment variables**: Ensure `.env` file exists with `API_KEY` and `DATABASE_URL`
+- **Port conflicts**: Check if port 8000 is available or change the port
+- **Import errors**: Verify all Python modules are properly installed
 
 ### API Key Issues
 
-- Ensure `.env.dev` file is in the project root directory
-- Verify API key format in `.env.dev`: `API_KEY=dev` (no quotes)
-- Check that `pydantic-settings` is installed
-- Restart server after modifying `.env.dev` file
-- Default development API key is "dev"
+- **Invalid API Key error**: Ensure `.env` file contains `API_KEY=your_secret_key`
+- **Missing header**: Include `X-API-KEY` header in all protected endpoint requests
+- **Configuration not loading**: Restart server after modifying `.env` file
+- **Pydantic settings**: Verify `pydantic-settings` is installed
 
-### Validation Errors
+### Database Operation Errors
 
-- Product name must be 2-12 characters long
-- Price must be greater than 1
-- Check field names match model exactly
-- Ensure JSON content-type header for POST/PUT requests
+- **Item not found**: Check if the item ID exists in the database
+- **Validation errors**: Item names cannot be empty or contain only whitespace
+- **Connection timeout**: Verify PostgreSQL container is healthy and accessible
+- **Schema issues**: Database tables are created automatically on startup
+
+### Docker Issues
+
+- **Container won't start**: Check Docker daemon is running
+- **Port already in use**: Stop other PostgreSQL instances or change port mapping
+- **Volume permissions**: Ensure Docker has permission to create volumes
+- **Memory issues**: Ensure sufficient system resources for PostgreSQL container
+
+### Common Error Responses
+
+#### 500 Internal Server Error
+
+```json
+{
+  "detail": "Database connection failed: connection refused"
+}
+```
+
+**Solution**: Start PostgreSQL with `docker-compose up -d`
+
+#### 403 Forbidden
+
+```json
+{
+  "detail": "Invalid API Key"
+}
+```
+
+**Solution**: Add correct `X-API-KEY` header to your request
+
+#### 404 Not Found
+
+```json
+{
+  "detail": "Item not found"
+}
+```
+
+**Solution**: Verify the item ID exists in the database
+
+#### 400 Bad Request
+
+```json
+{
+  "detail": "Item name cannot be empty"
+}
+```
+
+**Solution**: Provide a valid, non-empty item name
 
 ---
 
-*This project serves as a foundation for understanding FastAPI fundamentals and common API development patterns.*clear
+_This project demonstrates modern FastAPI development with PostgreSQL integration, async operations, and production-ready architecture patterns._

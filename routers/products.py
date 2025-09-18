@@ -6,7 +6,7 @@ from schemas.product import Product
 router = APIRouter(prefix="/api/v1/product", tags=["Products"])
 
 # Get All Product
-@router.get("/all")
+@router.get("/")
 def get_all_product(api_key: str = Depends(get_api_key)):
     return Inventory
 
